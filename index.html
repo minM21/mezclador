@@ -228,31 +228,32 @@
         <div class="price-calc-grid">
             <div class="form-panel">
                 <div class="input-row">
-                    <label>Ancho del lienzo (cm):</label>
-                    <input type="number" id="canvasWidth" placeholder="Ej: 50" min="1">
+                    <label for="canvasWidth">Ancho del lienzo (cm):</label>
+                    <input type="number" id="canvasWidth" placeholder="Ej: 50" min="1" step="any">
                 </div>
                 <div class="input-row">
-                    <label>Alto del lienzo (cm):</label>
-                    <input type="number" id="canvasHeight" placeholder="Ej: 70" min="1">
+                    <label for="canvasHeight">Alto del lienzo (cm):</label>
+                    <input type="number" id="canvasHeight" placeholder="Ej: 70" min="1" step="any">
                 </div>
                 <div class="input-row">
-                    <label>Costo de materiales ($):</label>
-                    <input type="number" id="materialsCost" placeholder="Ej: 350" min="0">
+                    <label for="materialsCost">Costo de materiales ($):</label>
+                    <input type="number" id="materialsCost" placeholder="Ej: 350" min="0" step="any">
                 </div>
                 <div class="input-row">
-                    <label>Horas de trabajo:</label>
-                    <input type="number" id="workHours" placeholder="Ej: 12" min="0">
+                    <label for="workHours">Horas de trabajo:</label>
+                    <input type="number" id="workHours" placeholder="Ej: 12" min="0" step="any">
                 </div>
                 <div class="input-row">
-                    <label>Precio por hora ($):</label>
-                    <input type="number" id="hourlyRate" placeholder="Ej: 100" min="0">
+                    <label for="hourlyRate">Precio por hora ($):</label>
+                    <input type="number" id="hourlyRate" placeholder="Ej: 100" min="0" step="any">
                 </div>
                 <div class="input-row">
-                    <label>Porcentaje de ganancia (%):</label>
-                    <input type="number" id="profitMargin" placeholder="Ej: 30" min="0">
+                    <label for="profitMargin">Porcentaje de ganancia (%):</label>
+                    <input type="number" id="profitMargin" placeholder="Ej: 30" min="0" step="any">
                 </div>
 
                 <button class="calc-action-btn" onclick="calculatePaintingPrice()">🧮 Calcular Precio Final</button>
+                <div id="priceError" role="alert" style="color:#ef9a9a; font-size:0.85rem;" hidden></div>
             </div>
 
             <div class="result-panel">
@@ -411,24 +412,26 @@
     }
 
     function calculateRgbRecipe() {
-        let r = parseInt(document.getElementById('targetR').value);
-        let g = parseInt(document.getElementById('targetG').value);
-        let b = parseInt(document.getElementById('targetB').value);
+        const rgbInputs = ['targetR', 'targetG', 'targetB'].map(id => document.getElementById(id).value.trim());
+        const hasRgbInput = rgbInputs.some(value => value !== '');
+        let r, g, b;
 
-        if (isNaN(r) || isNaN(g) || isNaN(b)) {
-            const hex = document.getElementById('targetHex').value.trim();
-            if (hex) {
-                const rgb = hexToRgb(hex.startsWith('#') ? hex : '#' + hex);
-                r = rgb.r; g = rgb.g; b = rgb.b;
-            } else {
-                document.getElementById('recipeResult').innerHTML = "<span style='color:#f88;'>Por favor ingresa un código HEX o los valores R, G, B válidos.</span>";
+        if (hasRgbInput) {
+            const values = rgbInputs.map(value => value === '' ? NaN : Number(value));
+            if (values.some(value => !Number.isInteger(value) || value < 0 || value > 255)) {
+                document.getElementById('recipeResult').innerHTML = "<span style='color:#f88;'>Ingresa valores R, G y B enteros entre 0 y 255.</span>";
                 return;
             }
+            [r, g, b] = values;
+        } else {
+            let hex = document.getElementById('targetHex').value.trim();
+            if (!hex.startsWith('#')) hex = `#${hex}`;
+            if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                document.getElementById('recipeResult').innerHTML = "<span style='color:#f88;'>Ingresa un código HEX válido de 6 dígitos o completa los valores R, G y B.</span>";
+                return;
+            }
+            ({ r, g, b } = hexToRgb(hex));
         }
-
-        r = Math.min(255, Math.max(0, r));
-        g = Math.min(255, Math.max(0, g));
-        b = Math.min(255, Math.max(0, b));
 
         // Conversión a CMYK + Blanco
         let rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
@@ -557,12 +560,40 @@
 
     // CALCULADORA MONETARIA
     function calculatePaintingPrice() {
-        const width = parseFloat(document.getElementById('canvasWidth').value) || 0;
-        const height = parseFloat(document.getElementById('canvasHeight').value) || 0;
-        const materials = parseFloat(document.getElementById('materialsCost').value) || 0;
-        const hours = parseFloat(document.getElementById('workHours').value) || 0;
-        const rate = parseFloat(document.getElementById('hourlyRate').value) || 0;
-        const profitMargin = parseFloat(document.getElementById('profitMargin').value) || 0;
+        const inputs = [
+            { id: 'canvasWidth', min: 1 },
+            { id: 'canvasHeight', min: 1 },
+            { id: 'materialsCost', min: 0 },
+            { id: 'workHours', min: 0 },
+            { id: 'hourlyRate', min: 0 },
+            { id: 'profitMargin', min: 0 }
+        ];
+        const values = inputs.map(({ id, min }) => {
+            const input = document.getElementById(id);
+            const value = input.value.trim() === '' ? NaN : Number(input.value);
+            const invalid = !Number.isFinite(value) || value < min;
+            input.setAttribute('aria-invalid', String(invalid));
+            return value;
+        });
+        const error = document.getElementById('priceError');
+        if (values.some(value => !Number.isFinite(value)) ||
+            values[0] < 1 || values[1] < 1 ||
+            values.slice(2).some(value => value < 0)) {
+            error.textContent = 'Completa todos los campos con valores válidos. Las dimensiones deben ser mayores que cero y los demás valores no pueden ser negativos.';
+            error.hidden = false;
+            const firstInvalid = inputs.find(({ id }) => document.getElementById(id).getAttribute('aria-invalid') === 'true');
+            if (firstInvalid) document.getElementById(firstInvalid.id).focus();
+            document.getElementById('finalPriceDisplay').textContent = '—';
+            document.getElementById('areaDisplay').textContent = '—';
+            document.getElementById('prodCostDisplay').textContent = '—';
+            document.getElementById('laborDisplay').textContent = '—';
+            document.getElementById('profitDisplay').textContent = '—';
+            return;
+        }
+        error.hidden = true;
+        error.textContent = '';
+
+        const [width, height, materials, hours, rate, profitMargin] = values;
 
         const area = width * height;
         const laborCost = hours * rate;
