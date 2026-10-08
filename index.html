@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mezclador de Pigmentos Sostenibles</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: #121212; color: #e0e0e0; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 15px; }
+        .art-app { background-color: #1e1e1e; border: 1px solid #333; border-radius: 16px; width: 100%; max-width: 980px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        .header-section { border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+        .header-section h1 { font-size: 1.6rem; color: #4caf50; margin-bottom: 5px; }
+        .header-section p { font-size: 0.9rem; color: #aaa; margin-bottom: 15px; }
+        
+        .top-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .nav-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tab-btn { background: #2a2a2a; color: #ccc; border: 1px solid #444; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+        .tab-btn.active { background: #4caf50; color: #121212; border-color: #4caf50; }
+        
+        .template-selector { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #aaa; }
+        .template-btn { background: #252525; border: 1px solid #444; color: #888; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+        .template-btn.active { border-color: #81c784; color: #81c784; font-weight: bold; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* MEZCLADOR */
+        .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .controls-panel { display: flex; flex-direction: column; gap: 14px; }
+        .slider-group { background-color: #2a2a2a; padding: 10px 14px; border-radius: 8px; border-left: 4px solid #555; }
+        .slider-group.c { border-color: #00bcd4; }
+        .slider-group.m { border-color: #e91e63; }
+        .slider-group.y { border-color: #ffeb3b; }
+        .slider-group.w { border-color: #ffffff; }
+        .slider-group.k { border-color: #757575; }
+        .slider-label { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+        input[type="range"] { width: 100%; height: 6px; border-radius: 3px; background: #444; outline: none; accent-color: #4caf50; }
+        
+        .canvas-section { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #181818; border-radius: 12px; border: 1px solid #2a2a2a; padding: 20px; }
+        canvas { border-radius: 50%; background-color: #000; box-shadow: 0 0 20px rgba(0,0,0,0.8); margin-bottom: 10px; }
+        
+        .status-panel { background-color: #252525; border-radius: 8px; padding: 20px; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; align-items: center; margin-top: 20px; }
+        .metrics { font-size: 0.85rem; line-height: 1.6; border-right: 1px solid #333; padding-right: 15px; }
+        .diagnostic-box { padding: 12px; border-radius: 6px; font-size: 0.9rem; background-color: #1b2e1b; border: 1px solid #2e7d32; color: #a5d6a7; }
+        .diagnostic-box.alert-mode { background-color: #3e1a1a; border-color: #c62828; color: #ef9a9a; }
+        
+        .recipe-section { background-color: #252525; border: 1px solid #333; border-radius: 8px; padding: 15px; margin-top: 20px; }
+        .recipe-section h4 { color: #81c784; font-size: 0.95rem; margin-bottom: 10px; }
+        .rgb-inputs { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+        .rgb-inputs input[type="number"] { width: 80px; background: #181818; border: 1px solid #444; color: #fff; padding: 6px 8px; border-radius: 6px; text-align: center; font-size: 0.85rem; }
+        .rgb-inputs input[type="text"] { width: 110px; background: #181818; border: 1px solid #444; color: #fff; padding: 6px 8px; border-radius: 6px; text-align: center; font-size: 0.85rem; font-family: monospace; }
+        .rgb-btn { background: #4caf50; color: #121212; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+
+        /* PALETA */
+        .palette-controls { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; background: #252525; padding: 15px; border-radius: 8px; flex-wrap: wrap; }
+        .palette-controls label { font-size: 0.9rem; color: #ccc; }
+        .palette-controls select { background: #1e1e1e; color: #fff; border: 1px solid #444; padding: 6px 12px; border-radius: 6px; outline: none; }
+        .generate-btn { background: #4caf50; color: #121212; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .palette-display { display: flex; height: 180px; border-radius: 12px; overflow: hidden; border: 1px solid #333; }
+        .color-swatch { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 10px; gap: 4px; }
+        .color-code { background: rgba(0, 0, 0, 0.75); color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 0.7rem; font-family: monospace; }
+
+        /* CALCULADORA DE PRECIO */
+        .price-calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-panel { background: #252525; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; gap: 12px; }
+        .input-row { display: flex; flex-direction: column; gap: 4px; }
+        .input-row label { font-size: 0.85rem; color: #ccc; }
+        .input-row input { background: #181818; border: 1px solid #444; color: #fff; padding: 8px 10px; border-radius: 6px; outline: none; font-size: 0.9rem; }
+        .calc-action-btn { background: #4caf50; color: #121212; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        
+        .result-panel { background: #181818; border: 1px solid #2a2a2a; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; gap: 15px; }
+        .result-card { background: #252525; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50; }
+        .result-card h4 { font-size: 0.85rem; color: #aaa; margin-bottom: 5px; }
+        .result-card .price-value { font-size: 1.8rem; color: #81c784; font-weight: bold; }
+        .result-breakdown { font-size: 0.85rem; color: #ccc; line-height: 1.6; }
+
+        /* RUEDA CROMÁTICA */
+        .wheel-grid { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+        .wheel-container { display: flex; flex-direction: column; align-items: center; gap: 12px; background: #252525; padding: 15px; border-radius: 10px; }
+        .wheel-container input[type="color"] { width: 100px; height: 100px; border: none; border-radius: 50%; cursor: pointer; background: transparent; }
+        .harmony-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+        .harmony-card { background: #252525; border: 1px solid #333; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .harmony-card h5 { color: #81c784; font-size: 0.85rem; }
+        .color-box-pair { display: flex; gap: 8px; flex-wrap: wrap; }
+        .c-box { flex: 1; min-width: 60px; height: 55px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.65rem; font-family: monospace; font-weight: bold; color: #fff; text-shadow: 0 0 3px #000; padding: 2px; }
+
+        /* PROYECTOS SIMILARES */
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 10px; }
+        .project-card { background: #252525; border: 1px solid #333; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
+        .project-card h4 { color: #81c784; font-size: 1rem; margin-bottom: 8px; }
+        .project-card p { font-size: 0.85rem; color: #ccc; line-height: 1.4; margin-bottom: 12px; }
+        .visit-btn { display: inline-block; background: #2e7d32; color: #fff; text-decoration: none; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; text-align: center; }
+
+        /* MÓVIL Y RESPONSIVO */
+        .mode-mobile .app-grid, .mode-mobile .status-panel, .mode-mobile .price-calc-grid, .mode-mobile .wheel-grid { grid-template-columns: 1fr !important; }
+        .mode-mobile .metrics { border-right: none !important; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .mode-mobile .art-app { max-width: 420px !important; padding: 15px !important; }
+        
+        @media (max-width: 768px) {
+            .app-grid, .status-panel, .price-calc-grid, .wheel-grid { grid-template-columns: 1fr; }
+            .metrics { border-right: none; border-bottom: 1px solid #333; padding-bottom: 10px; }
+            .palette-display { flex-direction: column; height: auto; }
+            .color-swatch { height: 60px; padding-bottom: 0; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="art-app" id="appContainer">
+    <div class="header-section">
+        <h1>Mezclador de Pigmentos</h1>
+        <p>Programación para Artistas I — Aplicación ODS 12: Producción y Consumo Responsables</p>
+        <div class="top-bar">
+            <div class="nav-tabs">
+                <button class="tab-btn active" onclick="switchTab('mezcladorTab', this)">Mezclador</button>
+                <button class="tab-btn" onclick="switchTab('paletaTab', this)">🎨 Paleta Aleatoria</button>
+                <button class="tab-btn" onclick="switchTab('ruedaTab', this)">🎡 Rueda Cromática</button>
+                <button class="tab-btn" onclick="switchTab('precioTab', this)">💰 Calculadora de Precio</button>
+                <button class="tab-btn" onclick="switchTab('similaresTab', this)">🧮 Calculadoras Similares</button>
+            </div>
+            <div class="template-selector">
+                <span>Diseño:</span>
+                <button class="template-btn active" id="btnPc" onclick="setTemplate('pc')">💻 PC</button>
+                <button class="template-btn" id="btnMobile" onclick="setTemplate('mobile')">📱 Móvil</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 1: MEZCLADOR DE PIGMENTOS Y RECETA -->
+    <div id="mezcladorTab" class="tab-content active">
+        <div class="app-grid">
+            <div class="controls-panel">
+                <div class="slider-group c"><div class="slider-label"><span>Cian</span><span id="txt-c">0 ml</span></div><input type="range" id="input-c" min="0" max="100" value="0"></div>
+                <div class="slider-group m"><div class="slider-label"><span>Magenta</span><span id="txt-m">0 ml</span></div><input type="range" id="input-m" min="0" max="100" value="0"></div>
+                <div class="slider-group y"><div class="slider-label"><span>Amarillo</span><span id="txt-y">0 ml</span></div><input type="range" id="input-y" min="0" max="100" value="0"></div>
+                <div class="slider-group w"><div class="slider-label"><span>Blanco</span><span id="txt-w">0 ml</span></div><input type="range" id="input-w" min="0" max="100" value="0"></div>
+                <div class="slider-group k"><div class="slider-label"><span>Negro</span><span id="txt-k">0 ml</span></div><input type="range" id="input-k" min="0" max="100" value="0"></div>
+            </div>
+            <div class="canvas-section">
+                <canvas id="viewCanvas" width="180" height="180"></canvas>
+                <span id="currentColorName" style="font-size:1.1rem; font-weight:bold; color:#81c784; margin-top:5px;">Blanco</span>
+            </div>
+        </div>
+        
+        <div class="status-panel">
+            <div class="metrics">
+                <div>Color RGB: <b id="out-rgb">(255, 255, 255)</b></div>
+                <div>Volumen Preparado: <b id="out-vol">0 ml</b></div>
+                <div>Índice Toxicidad: <b id="out-tox">0%</b></div>
+            </div>
+            <div class="diagnostic-box" id="diag-box">Mueve los controles para simular la mezcla de pigmentos sobre la paleta virtual.</div>
+        </div>
+
+        <!-- SECCIÓN DE RECETA RGB Y HEX -->
+        <div class="recipe-section">
+            <h4>🧪 Obtener Receta de Mezcla por Código RGB o HEX (#)</h4>
+            <div class="rgb-inputs">
+                <input type="color" id="targetColorPicker" value="#4cae50" onchange="syncRgbFromPicker()" style="width:35px; height:32px; border:none; background:transparent; cursor:pointer;">
+                <input type="text" id="targetHex" placeholder="#FF4500" oninput="syncFromHexInput()">
+                <span style="color:#aaa; font-size:0.8rem;">o RGB:</span>
+                <input type="number" id="targetR" placeholder="R" min="0" max="255">
+                <input type="number" id="targetG" placeholder="G" min="0" max="255">
+                <input type="number" id="targetB" placeholder="B" min="0" max="255">
+                <button class="rgb-btn" onclick="calculateRgbRecipe()">Calcular Receta</button>
+            </div>
+            <div id="recipeResult" style="font-size:0.9rem; color:#ccc;">Ingresa un código RGB o HEX (#) para obtener la receta de mezcla.</div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 2: PALETA ALEATORIA -->
+    <div id="paletaTab" class="tab-content">
+        <h3 style="color:#81c784; margin-bottom:15px;">🎨 Generador Aleatorio de Paletas</h3>
+        <div class="palette-controls">
+            <label for="colorCount">Cantidad de Colores:</label>
+            <select id="colorCount">
+                <option value="2">2 Colores</option>
+                <option value="3">3 Colores</option>
+                <option value="4">4 Colores</option>
+                <option value="5" selected>5 Colores</option>
+                <option value="6">6 Colores</option>
+                <option value="7">7 Colores</option>
+                <option value="8">8 Colores</option>
+                <option value="9">9 Colores</option>
+                <option value="10">10 Colores</option>
+            </select>
+            <button class="generate-btn" onclick="generatePalette()">🎲 Generar Paleta</button>
+        </div>
+        <div class="palette-display" id="paletteDisplay"></div>
+    </div>
+
+    <!-- PESTAÑA 3: RUEDA CROMÁTICA INTERACTIVA -->
+    <div id="ruedaTab" class="tab-content">
+        <h3 style="color:#81c784; margin-bottom:15px;">🎡 Rueda Cromática (Complementario, Análogos, Tríada, Tétrada)</h3>
+        <div class="wheel-grid">
+            <div class="wheel-container">
+                <label style="font-size:0.85rem; color:#ccc;">Color base:</label>
+                <input type="color" id="baseColorPicker" value="#ff4500" onchange="updateColorWheelHarmonies()" oninput="updateColorWheelHarmonies()">
+                <div style="text-align:center;">
+                    <span id="baseHexDisplay" style="font-family:monospace; font-weight:bold; color:#81c784; display:block;">#FF4500</span>
+                    <span id="baseRgbDisplay" style="font-family:monospace; font-size:0.75rem; color:#aaa;">RGB(255, 69, 0)</span>
+                </div>
+            </div>
+            <div class="harmony-grid">
+                <div class="harmony-card">
+                    <h5>COMPLEMENTARIO</h5>
+                    <div class="color-box-pair" id="boxComp"></div>
+                </div>
+                <div class="harmony-card">
+                    <h5>ANÁLOGOS</h5>
+                    <div class="color-box-pair" id="boxAnalog"></div>
+                </div>
+                <div class="harmony-card">
+                    <h5>TRÍADA DE COLOR</h5>
+                    <div class="color-box-pair" id="boxTriad"></div>
+                </div>
+                <div class="harmony-card">
+                    <h5>TÉTRADA</h5>
+                    <div class="color-box-pair" id="boxTetrad"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 4: CALCULADORA DE PRECIO -->
+    <div id="precioTab" class="tab-content">
+        <h3 style="color:#81c784; margin-bottom:15px;">💰 Calculadora de Precio para Obras</h3>
+        <div class="price-calc-grid">
+            <div class="form-panel">
+                <div class="input-row">
+                    <label>Ancho del lienzo (cm):</label>
+                    <input type="number" id="canvasWidth" placeholder="Ej: 50" min="1">
+                </div>
+                <div class="input-row">
+                    <label>Alto del lienzo (cm):</label>
+                    <input type="number" id="canvasHeight" placeholder="Ej: 70" min="1">
+                </div>
+                <div class="input-row">
+                    <label>Costo de materiales ($):</label>
+                    <input type="number" id="materialsCost" placeholder="Ej: 350" min="0">
+                </div>
+                <div class="input-row">
+                    <label>Horas de trabajo:</label>
+                    <input type="number" id="workHours" placeholder="Ej: 12" min="0">
+                </div>
+                <div class="input-row">
+                    <label>Precio por hora ($):</label>
+                    <input type="number" id="hourlyRate" placeholder="Ej: 100" min="0">
+                </div>
+                <div class="input-row">
+                    <label>Porcentaje de ganancia (%):</label>
+                    <input type="number" id="profitMargin" placeholder="Ej: 30" min="0">
+                </div>
+
+                <button class="calc-action-btn" onclick="calculatePaintingPrice()">🧮 Calcular Precio Final</button>
+            </div>
+
+            <div class="result-panel">
+                <div class="result-card">
+                    <h4>PRECIO FINAL SUGERIDO</h4>
+                    <div class="price-value" id="finalPriceDisplay">$0.00</div>
+                </div>
+                <div class="result-breakdown">
+                    <div>📏 Área total: <b id="areaDisplay">0 cm²</b></div>
+                    <div>🛠️ Costo de Producción: <b id="prodCostDisplay">$0.00</b></div>
+                    <div>💼 Mano de Obra: <b id="laborDisplay">$0.00</b></div>
+                    <div>📈 Ganancia Líquida: <b id="profitDisplay">$0.00</b></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA 5: CALCULADORAS SIMILARES -->
+    <div id="similaresTab" class="tab-content">
+        <h3 style="color:#81c784; margin-bottom:15px;">🧮 Calculadoras Similares para Artistas</h3>
+        <div class="projects-grid">
+            <div class="project-card">
+                <div>
+                    <h4>Artpricing — Artwork Price Calculator</h4>
+                    <p>Herramienta para estimar el precio de venta de obras en base a dimensiones y trayectoria.</p>
+                </div>
+                <a href="https://www.artpricing.com" target="_blank" rel="noopener" class="visit-btn">Probar Calculadora 🔗</a>
+            </div>
+            <div class="project-card">
+                <div>
+                    <h4>Golden Paint Mix Calculator</h4>
+                    <p>Calculadora que determina la proporción exacta de pigmento y medio requeridos por área.</p>
+                </div>
+                <a href="https://www.goldenpaints.com" target="_blank" rel="noopener" class="visit-btn">Probar Calculadora 🔗</a>
+            </div>
+            <div class="project-card">
+                <div>
+                    <h4>Artistic Prestige Pricing Matrix</h4>
+                    <p>Calculadora de valoración artística por centímetros cuadrados y costo de insumos.</p>
+                </div>
+                <a href="https://www.artworkarchive.com" target="_blank" rel="noopener" class="visit-btn">Probar Calculadora 🔗</a>
+            </div>
+            <div class="project-card">
+                <div>
+                    <h4>Eco-Pigment Volumetric Calculator</h4>
+                    <p>Calculadora para estimar el volumen de pigmento orgánico necesario sin generar desperdicio.</p>
+                </div>
+                <a href="https://www.sustainablepractice.org" target="_blank" rel="noopener" class="visit-btn">Probar Calculadora 🔗</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabId, element) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        element.classList.add('active');
+    }
+
+    function setTemplate(mode) {
+        const container = document.getElementById('appContainer');
+        if (mode === 'mobile') {
+            container.classList.add('mode-mobile');
+            document.getElementById('btnMobile').classList.add('active');
+            document.getElementById('btnPc').classList.remove('active');
+        } else {
+            container.classList.remove('mode-mobile');
+            document.getElementById('btnPc').classList.add('active');
+            document.getElementById('btnMobile').classList.remove('active');
+        }
+    }
+
+    // Nombre simple del color por RGB
+    function getColorSimpleName(r, g, b) {
+        if (r > 200 && g > 200 && b > 200) return "Blanco";
+        if (r < 50 && g < 50 && b < 50) return "Negro";
+        if (Math.abs(r - g) < 20 && Math.abs(g - b) < 20) return "Gris";
+        
+        if (r > g && r > b) {
+            if (g > 150) return "Amarillo / Naranja";
+            if (b > 100) return "Rosa / Rosa Púrpura";
+            return "Rojo";
+        }
+        if (g > r && g > b) {
+            if (r > 100) return "Verde Claro / Lima";
+            if (b > 100) return "Cian / Verde Agua";
+            return "Verde";
+        }
+        if (b > r && b > g) {
+            if (r > 100) return "Violeta / Púrpura";
+            if (g > 150) return "Celeste";
+            return "Azul";
+        }
+        return "Color Mezclado";
+    }
+
+    // MEZCLADOR DE PIGMENTOS
+    const inC = document.getElementById('input-c'), inM = document.getElementById('input-m'), inY = document.getElementById('input-y'), inW = document.getElementById('input-w'), inK = document.getElementById('input-k');
+    const txtC = document.getElementById('txt-c'), txtM = document.getElementById('txt-m'), txtY = document.getElementById('txt-y'), txtW = document.getElementById('txt-w'), txtK = document.getElementById('txt-k');
+    const outRgb = document.getElementById('out-rgb'), outVol = document.getElementById('out-vol'), outTox = document.getElementById('out-tox'), diagBox = document.getElementById('diag-box');
+    const canvas = document.getElementById('viewCanvas'), ctx = canvas.getContext('2d');
+    const colorNameEl = document.getElementById('currentColorName');
+
+    function processMix() {
+        const c = parseFloat(inC.value), m = parseFloat(inM.value), y = parseFloat(inY.value), w = parseFloat(inW.value), k = parseFloat(inK.value);
+        txtC.textContent = c + ' ml'; txtM.textContent = m + ' ml'; txtY.textContent = y + ' ml'; txtW.textContent = w + ' ml'; txtK.textContent = k + ' ml';
+        let C = c/100, M = m/100, Y = y/100, K = k/100, W = w/100;
+        let r = Math.round((255 * (1 - C) * (1 - K)) + (255 - (255 * (1 - C) * (1 - K))) * W);
+        let g = Math.round((255 * (1 - M) * (1 - K)) + (255 - (255 * (1 - M) * (1 - K))) * W);
+        let b = Math.round((255 * (1 - Y) * (1 - K)) + (255 - (255 * (1 - Y) * (1 - K))) * W);
+        const totalVol = c + m + y + w + k;
+        const toxIndex = totalVol > 0 ? Math.min(100, Math.round(((k * 2.5 + (c + m + y) * 0.3 + w * 0.1) / 300) * 100)) : 0;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (totalVol > 0) {
+            const colorStr = `rgb(${r}, ${g}, ${b})`;
+            const radius = Math.min(75, 15 + totalVol * 0.2);
+            const grad = ctx.createRadialGradient(90, 90, 5, 90, 90, radius);
+            grad.addColorStop(0, colorStr); grad.addColorStop(0.8, colorStr); grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+            ctx.beginPath(); ctx.arc(90, 90, radius, 0, Math.PI * 2); ctx.fillStyle = grad; ctx.fill();
+            ctx.lineWidth = 2; ctx.strokeStyle = '#444'; ctx.stroke();
+        } else { ctx.fillStyle = '#111'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        
+        outRgb.textContent = `(${r}, ${g}, ${b})`; outVol.textContent = `${totalVol} ml`; outTox.textContent = `${toxIndex}%`;
+        colorNameEl.textContent = totalVol > 0 ? getColorSimpleName(r, g, b) : "Blanco";
+
+        if (toxIndex > 40) { diagBox.className = 'diagnostic-box alert-mode'; diagBox.innerHTML = '⚠️ <b>Alerta Ambiental (ODS 12):</b> Elevada concentración sintética.'; }
+        else if (totalVol > 0) { diagBox.className = 'diagnostic-box'; diagBox.innerHTML = '🌱 <b>Práctica Sostenible:</b> Perfil ecológico óptimo.'; }
+        else { diagBox.className = 'diagnostic-box'; diagBox.textContent = 'Mueve los controles para simular la mezcla de pigmentos.'; }
+    }
+
+    [inC, inM, inY, inW, inK].forEach(input => input.addEventListener('input', processMix));
+
+    // RECETA DE MEZCLA DESDE RGB / HEX (#)
+    function syncRgbFromPicker() {
+        const hex = document.getElementById('targetColorPicker').value;
+        document.getElementById('targetHex').value = hex.toUpperCase();
+        const rgb = hexToRgb(hex);
+        document.getElementById('targetR').value = rgb.r;
+        document.getElementById('targetG').value = rgb.g;
+        document.getElementById('targetB').value = rgb.b;
+    }
+
+    function syncFromHexInput() {
+        let val = document.getElementById('targetHex').value.trim();
+        if (!val.startsWith('#')) val = '#' + val;
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+            document.getElementById('targetColorPicker').value = val;
+            const rgb = hexToRgb(val);
+            document.getElementById('targetR').value = rgb.r;
+            document.getElementById('targetG').value = rgb.g;
+            document.getElementById('targetB').value = rgb.b;
+        }
+    }
+
+    function calculateRgbRecipe() {
+        let r = parseInt(document.getElementById('targetR').value);
+        let g = parseInt(document.getElementById('targetG').value);
+        let b = parseInt(document.getElementById('targetB').value);
+
+        if (isNaN(r) || isNaN(g) || isNaN(b)) {
+            const hex = document.getElementById('targetHex').value.trim();
+            if (hex) {
+                const rgb = hexToRgb(hex.startsWith('#') ? hex : '#' + hex);
+                r = rgb.r; g = rgb.g; b = rgb.b;
+            } else {
+                document.getElementById('recipeResult').innerHTML = "<span style='color:#f88;'>Por favor ingresa un código HEX o los valores R, G, B válidos.</span>";
+                return;
+            }
+        }
+
+        r = Math.min(255, Math.max(0, r));
+        g = Math.min(255, Math.max(0, g));
+        b = Math.min(255, Math.max(0, b));
+
+        // Conversión a CMYK + Blanco
+        let rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+        let k = 1 - Math.max(rNorm, gNorm, bNorm);
+        let c = k === 1 ? 0 : (1 - rNorm - k) / (1 - k);
+        let m = k === 1 ? 0 : (1 - gNorm - k) / (1 - k);
+        let y = k === 1 ? 0 : (1 - bNorm - k) / (1 - k);
+        let luminosity = (rNorm + gNorm + bNorm) / 3;
+        let w = luminosity > 0.5 ? (luminosity - 0.5) * 2 : 0;
+
+        let mlC = Math.round(c * 100), mlM = Math.round(m * 100), mlY = Math.round(y * 100), mlK = Math.round(k * 100), mlW = Math.round(w * 100);
+        const name = getColorSimpleName(r, g, b);
+
+        document.getElementById('recipeResult').innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <div style="width:25px; height:25px; border-radius:50%; background-color:rgb(${r},${g},${b}); border:1px solid #555;"></div>
+                <b style="color:#81c784;">${name}</b> <span style="color:#aaa; font-size:0.8rem;">(RGB: ${r}, ${g}, ${b})</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:0.8rem; font-family:monospace;">
+                ${mlC > 0 ? `<span style="background:#181818; padding:3px 6px; border-radius:4px; border-left:3px solid #00bcd4;">🩵 Cian: ${mlC} ml</span>` : ''}
+                ${mlM > 0 ? `<span style="background:#181818; padding:3px 6px; border-radius:4px; border-left:3px solid #e91e63;">🩷 Magenta: ${mlM} ml</span>` : ''}
+                ${mlY > 0 ? `<span style="background:#181818; padding:3px 6px; border-radius:4px; border-left:3px solid #ffeb3b;">💛 Amarillo: ${mlY} ml</span>` : ''}
+                ${mlW > 0 ? `<span style="background:#181818; padding:3px 6px; border-radius:4px; border-left:3px solid #ffffff;">🤍 Blanco: ${mlW} ml</span>` : ''}
+                ${mlK > 0 ? `<span style="background:#181818; padding:3px 6px; border-radius:4px; border-left:3px solid #757575;">🖤 Negro: ${mlK} ml</span>` : ''}
+            </div>
+        `;
+    }
+
+    // PALETA ALEATORIA
+    function generatePalette() {
+        const count = parseInt(document.getElementById('colorCount').value);
+        const display = document.getElementById('paletteDisplay');
+        display.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const r = Math.floor(Math.random()*256), g = Math.floor(Math.random()*256), b = Math.floor(Math.random()*256);
+            const hex = "#" + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch';
+            swatch.style.backgroundColor = hex;
+            
+            const codeName = document.createElement('span');
+            codeName.className = 'color-code';
+            codeName.textContent = getColorSimpleName(r, g, b);
+
+            const codeHex = document.createElement('span');
+            codeHex.className = 'color-code';
+            codeHex.textContent = hex.toUpperCase();
+
+            swatch.appendChild(codeName);
+            swatch.appendChild(codeHex);
+            display.appendChild(swatch);
+        }
+    }
+
+    // RUEDA CROMÁTICA
+    function hexToRgb(hex) {
+        let cleanHex = hex.replace('#', '');
+        if (cleanHex.length === 3) cleanHex = cleanHex.split('').map(c => c + c).join('');
+        let r = parseInt(cleanHex.substring(0,2), 16) || 0;
+        let g = parseInt(cleanHex.substring(2,4), 16) || 0;
+        let b = parseInt(cleanHex.substring(4,6), 16) || 0;
+        return { r, g, b };
+    }
+
+    function hexToHSL(hex) {
+        let { r, g, b } = hexToRgb(hex);
+        r /= 255; g /= 255; b /= 255;
+        let max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        if (max === min) { h = s = 0; } else {
+            let d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    }
+
+    function hslToHex(h, s, l) {
+        h = (h % 360 + 360) % 360;
+        s /= 100; l /= 100;
+        let c = (1 - Math.abs(2 * l - 1)) * s;
+        let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        let m = l - c / 2;
+        let r = 0, g = 0, b = 0;
+        if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+        else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+        else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+        else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+        else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+        else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+        
+        let rInt = Math.round((r + m) * 255);
+        let gInt = Math.round((g + m) * 255);
+        let bInt = Math.round((b + m) * 255);
+        
+        let hexStr = `#${rInt.toString(16).padStart(2,'0')}${gInt.toString(16).padStart(2,'0')}${bInt.toString(16).padStart(2,'0')}`.toUpperCase();
+        return { hex: hexStr, name: getColorSimpleName(rInt, gInt, bInt) };
+    }
+
+    function createColorBox(colorObj) {
+        return `<div class="c-box" style="background-color:${colorObj.hex};">
+                    <span>${colorObj.name}</span>
+                    <span style="font-size:0.6rem; opacity:0.8;">${colorObj.hex}</span>
+                </div>`;
+    }
+
+    function updateColorWheelHarmonies() {
+        const hex = document.getElementById('baseColorPicker').value;
+        const rgb = hexToRgb(hex);
+        document.getElementById('baseHexDisplay').textContent = hex.toUpperCase();
+        document.getElementById('baseRgbDisplay').textContent = `RGB(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+        
+        const hsl = hexToHSL(hex);
+
+        document.getElementById('boxComp').innerHTML = createColorBox(hslToHex(hsl.h + 180, hsl.s, hsl.l));
+        document.getElementById('boxAnalog').innerHTML = createColorBox(hslToHex(hsl.h - 30, hsl.s, hsl.l)) + createColorBox(hslToHex(hsl.h + 30, hsl.s, hsl.l));
+        document.getElementById('boxTriad').innerHTML = createColorBox(hslToHex(hsl.h + 120, hsl.s, hsl.l)) + createColorBox(hslToHex(hsl.h + 240, hsl.s, hsl.l));
+        document.getElementById('boxTetrad').innerHTML = createColorBox(hslToHex(hsl.h + 90, hsl.s, hsl.l)) + createColorBox(hslToHex(hsl.h + 180, hsl.s, hsl.l)) + createColorBox(hslToHex(hsl.h + 270, hsl.s, hsl.l));
+    }
+
+    // CALCULADORA MONETARIA
+    function calculatePaintingPrice() {
+        const width = parseFloat(document.getElementById('canvasWidth').value) || 0;
+        const height = parseFloat(document.getElementById('canvasHeight').value) || 0;
+        const materials = parseFloat(document.getElementById('materialsCost').value) || 0;
+        const hours = parseFloat(document.getElementById('workHours').value) || 0;
+        const rate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+        const profitMargin = parseFloat(document.getElementById('profitMargin').value) || 0;
+
+        const area = width * height;
+        const laborCost = hours * rate;
+        const productionCost = materials + laborCost;
+        const profit = productionCost * (profitMargin / 100);
+        const finalPrice = productionCost + profit;
+
+        document.getElementById('finalPriceDisplay').textContent = `$${finalPrice.toFixed(2)}`;
+        document.getElementById('areaDisplay').textContent = `${area} cm²`;
+        document.getElementById('prodCostDisplay').textContent = `$${productionCost.toFixed(2)}`;
+        document.getElementById('laborDisplay').textContent = `$${laborCost.toFixed(2)}`;
+        document.getElementById('profitDisplay').textContent = `$${profit.toFixed(2)}`;
+    }
+
+    // Inicializaciones
+    processMix();
+    generatePalette();
+    updateColorWheelHarmonies();
+</script>
+</body>
+</html>
